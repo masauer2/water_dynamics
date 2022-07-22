@@ -1,4 +1,4 @@
 # water_dynamics
 
 ## index_waters.c
-Create H_3O
+Create H<sup>3</sup>O
