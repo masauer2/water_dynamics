@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <math.h>
 
-#define NUM_OF_FRAMES 50000
+#define NUM_OF_FRAMES 1
 #define NUM_OF_ATOMS 385
 #define BOX_SIZE 15.8122
 
@@ -24,6 +24,8 @@ struct H2O{
 	float o1[3];
 	float h1[3];
 	float h2[3];
+	int index_h1;
+	int index_h2;
 };
 
 struct Frame{
@@ -148,7 +150,7 @@ void identify_ion(int oxygen_id, struct Frame *analysis_frame, struct H3O *hydro
 				distances[2] = distances[1]; 
 				distances[1] = distances[0]; 
 				distances[0] = distance;
-			        indexe[2] = indexe[1];
+			    indexe[2] = indexe[1];
 				indexe[1] = indexe[0];	
 				indexe[0] = i;
 			}
@@ -156,7 +158,56 @@ void identify_ion(int oxygen_id, struct Frame *analysis_frame, struct H3O *hydro
 	}
 	
 	assign_ion(oxygen_id, indexe, analysis_frame, hydronium);
+	
 }
+
+void identify_waters(int oxygen_id, struct Frame *analysis_frame, struct H2O *waters){
+		float distance;
+		float distances[] = {16,17};
+		int indexe[] = {-1,-1};
+		int k = -1;
+		for(int i = 0; i < NUM_OF_ATOMS; i++){
+			if(analysis_frame->atom_name[i] == 'O' && i != oxygen_id){
+				k++;
+				float distances[] = {16,17};
+				int indexe[] = {-1,-1};
+				for(int j = 0; j < NUM_OF_ATOMS; j++){
+					if(analysis_frame->atom_name[j] == 'H'){
+						distance = compute_distance(i, j, analysis_frame);
+						if(distance < distances[1] && distance > distances[0]){ 
+							distances[1] = distance; 
+							indexe[1] = j;
+						}
+						else if(distance < distances[0]){
+							distances[1] = distances[0]; 
+							distances[0] = distance;
+							indexe[1] = indexe[0];	
+							indexe[0] = j;
+						}
+					}
+				}
+				waters[k].o1[0] = analysis_frame->x[i];
+				waters[k].o1[1] = analysis_frame->y[i];
+				waters[k].o1[2] = analysis_frame->z[i];
+				waters[k].h1[0] = analysis_frame->x[indexe[0]];
+				waters[k].h1[1] = analysis_frame->y[indexe[0]];
+				waters[k].h1[2] = analysis_frame->z[indexe[0]];
+				waters[k].h2[0] = analysis_frame->x[indexe[1]];
+				waters[k].h2[1] = analysis_frame->y[indexe[1]];
+				waters[k].h2[2] = analysis_frame->z[indexe[1]];
+				waters[k].index_h1 = indexe[0];
+				waters[k].index_h2 = indexe[1];
+			}
+		
+		//assign_ion(oxygen_id, indexe, analysis_frame, hydronium);
+		}
+		for(int i = 0; i < 126; i++){
+			printf("Oxygen ID: %d\n", i);
+			printf("%d %d\n", waters[i].index_h1 , waters[i].index_h2);
+			printf("======================================================\n\n");		
+		}
+}
+
 
 
 int main(){
@@ -195,7 +246,9 @@ int main(){
 		printf("Finished reading frame %d\n", k);
 		int current_H3O = ids.idx[k];
  		struct H3O hydronium;
-		identify_ion(current_H3O, &frame, &hydronium);	
+		struct H2O waters[127];
+		identify_ion(current_H3O, &frame, &hydronium);
+		identify_waters(current_H3O, &frame, waters);	
 	}
 	fclose(fp);
 }
