@@ -1,4 +1,4 @@
 # water_dynamics
 
 ## index_waters.c
-Create H<sup>3</sup>O
+Identify the H<sub>3</sub>O molecule and all of the H<sub>2</sub>O molecules for the provided frames.
