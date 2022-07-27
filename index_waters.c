@@ -9,6 +9,10 @@
 #define NUM_OF_ATOMS 385 // Total number of atoms in each of the frames
 #define BOX_SIZE 15.8122 // Simulation box size
 
+
+struct BookKeeping{
+	int o[3];
+};
 /*
 Stores the ids of the hydronium ion from the id file
 */
@@ -31,6 +35,13 @@ struct H3O{
 	int index_h1; 
 	int index_h2;
 	int index_h3;
+
+	// We need to find trajectories where the index of the hydronium ion is constant
+	// Store the index according to hydronium_idx[frame_number].idx[n]
+	int ion_index;
+
+	// What are the three closest water molecule ids?
+	int closest_waters[3];
 };
 
 /*
@@ -58,23 +69,10 @@ struct Frame{
 	float z[NUM_OF_ATOMS]; //Stores z coordinates for a frame
 };
 
-/*
-Printing function. NOT USED.
-*/
-void print_array(int* array_to_print, int SIZE){
-	for(int i = 0; i < SIZE; i++){
-		printf("%d -> %d \n", i, array_to_print[i]);
-	}
-}
-
-/*
-Printing function. NOT USED.
-*/
-void print_frame(struct Frame frame_to_print, int SIZE){
-	for(int i = 0; i < SIZE; i++){
-		printf("%d -> %c: %f %f %f\n", i, frame_to_print.atom_name[i], frame_to_print.x[i], frame_to_print.y[i], frame_to_print.z[i]);
-	}
-}
+struct Stack{
+	struct H3O ion;
+	struct H2O water[127];
+};
 
 
 /*
@@ -170,8 +168,56 @@ float compute_distance(int oxygen_id, int i, struct Frame *analysis_frame){
 	return distance_magnitude;
 }
 
+float compute_oxygen_distances(float o1[], float o2[]){
+	float distance_vector[3];
+	float distance_magnitude;
+
+	// Compute the distance vector in the x-direction
+	distance_vector[0] = o1[0] - o1[0];
+
+	// Distance vector must also obey this convention
+	// Check distance vector in x-direction
+	if(distance_vector[0] > BOX_SIZE * 0.5){
+		distance_vector[0] = distance_vector[0] - BOX_SIZE;
+	}
+	else if(distance_vector[0] <= -BOX_SIZE * 0.5){
+		distance_vector[0] = distance_vector[0] + BOX_SIZE;
+	}
+
+	// Compute the distance vector in the y-direction
+	distance_vector[1] = o1[1] - o2[1];
+
+	// Check distance vector in y-direction
+	if(distance_vector[1] > BOX_SIZE * 0.5){
+	        distance_vector[1] = distance_vector[1] - BOX_SIZE;
+	}
+	else if(distance_vector[1] <= -BOX_SIZE * 0.5){
+	        distance_vector[1] = distance_vector[1] + BOX_SIZE;
+	}
+	
+	// Compute the distance vector in the z-direction
+	distance_vector[2] = o1[2] - o2[2];
+
+	// Check distance vector in z-direction
+	if(distance_vector[2] > BOX_SIZE * 0.5){
+	        distance_vector[2] = distance_vector[2] - BOX_SIZE;
+	}
+	else if(distance_vector[2] <= -BOX_SIZE * 0.5){
+	        distance_vector[2] = distance_vector[2] + BOX_SIZE;
+	}
+
+	// Compute the distance between the two atoms and return this value
+	distance_magnitude = sqrt(pow(distance_vector[0],2) + pow(distance_vector[1],2) + pow(distance_vector[2],2));	
+	return distance_magnitude;
+}
+
 /*
 Assign the water molecule coordinates to the respective struct.
+
+water_id is the unique water id number as stored in the struct water.
+However, the water id as stored in the original coordinate file is actually oxygen_id,
+since oxygen_id stores the raw index of the water oxygen from the coordinate file.
+We match the indexing of the water molecules to the indexing found in id_hydronium.dat.
 */
 void assign_waters(int water_id, int oxygen_id, int* hydrogen_index, struct Frame *analysis_frame, struct H2O *waters){
 
@@ -187,13 +233,13 @@ void assign_waters(int water_id, int oxygen_id, int* hydrogen_index, struct Fram
 				waters[water_id].h2[0] = analysis_frame->x[hydrogen_index[1]];
 				waters[water_id].h2[1] = analysis_frame->y[hydrogen_index[1]];
 				waters[water_id].h2[2] = analysis_frame->z[hydrogen_index[1]];
-
 				//Assign the oxygen index
 				waters[water_id].index_o1 = oxygen_id;
 
 				//Assign the hydrogen indeces
 				waters[water_id].index_h1 = hydrogen_index[0];
 				waters[water_id].index_h2 = hydrogen_index[1];
+
 }
 
 
@@ -212,9 +258,11 @@ void assign_ion(int oxygen_id, int* hydrogen_index, struct Frame *analysis_frame
 	hydronium->h1[0] = analysis_frame->x[hydrogen_index[0]];
 	hydronium->h1[1] = analysis_frame->y[hydrogen_index[0]];
 	hydronium->h1[2] = analysis_frame->z[hydrogen_index[0]];
+
 	hydronium->h2[0] = analysis_frame->x[hydrogen_index[1]];
 	hydronium->h2[1] = analysis_frame->y[hydrogen_index[1]];
 	hydronium->h2[2] = analysis_frame->z[hydrogen_index[1]];
+
 	hydronium->h3[0] = analysis_frame->x[hydrogen_index[2]];
 	hydronium->h3[1] = analysis_frame->y[hydrogen_index[2]];
 	hydronium->h3[2] = analysis_frame->z[hydrogen_index[2]];
@@ -227,11 +275,19 @@ void assign_ion(int oxygen_id, int* hydrogen_index, struct Frame *analysis_frame
 	hydronium->index_h2 = hydrogen_index[1];
 	hydronium->index_h3 = hydrogen_index[2];
 
+	hydronium->ion_index= oxygen_id;
 	//Print out some basic info about the hydronium ion
-	printf("Oxygen ID: %d\n", oxygen_id);
-	printf("%d %d %d\n", hydrogen_index[0], hydrogen_index[1], hydrogen_index[2]);
+	printf("Oxygen ID IN FRAME: %d\n", oxygen_id);
+	printf("HYDRONIUM HYDROGEN IDS: %d %d %d\n", hydrogen_index[0], hydrogen_index[1], hydrogen_index[2]);
 }
 
+void assign_closest_waters(int water_idx[], struct BookKeeping *closestOs){
+	closestOs -> o[0] = water_idx[0];
+	closestOs -> o[1] = water_idx[1];
+	closestOs -> o[2] = water_idx[2];
+	printf("Three Closest Oxygen IDS: [%d %d %d].\n", water_idx[0], water_idx[1],water_idx[2]);
+
+}
 /*
 Use the distance formula in order to find the three closest hydrogens to the oxygen molecule based off of
 the provided id.
@@ -283,6 +339,7 @@ void identify_ion(int oxygen_id, struct Frame *analysis_frame, struct H3O *hydro
 	
 	//Assign the coordinates of the hydrogen to the hydronium oxygen and print out information about the ion
 	assign_ion(oxygen_id, hydrogen_idx, analysis_frame, hydronium);
+
 	
 }
 
@@ -304,7 +361,7 @@ void identify_waters(int oxygen_id, struct Frame *analysis_frame, struct H2O *wa
 	for(int i = 0; i < NUM_OF_ATOMS; i++){
 		if(analysis_frame->atom_name[i] == 'O' && i != oxygen_id){
 			k++;
-			float distances[] = {16,17};
+			float distances[] = {16,17}; //dup?
 			int indexe[] = {-1,-1};
 			for(int j = 0; j < NUM_OF_ATOMS; j++){
 				if(analysis_frame->atom_name[j] == 'H'){
@@ -324,7 +381,6 @@ void identify_waters(int oxygen_id, struct Frame *analysis_frame, struct H2O *wa
 
 			// Build water molecules
 			assign_waters(k, i, indexe, analysis_frame, waters);
-
 			}
 		}
 }
@@ -333,6 +389,74 @@ void identify_waters(int oxygen_id, struct Frame *analysis_frame, struct H2O *wa
 /*
 USAGE: ./index_waters begin_frame end_frame
 */
+
+void identify_closest_oxygens(struct Stack *stack, struct BookKeeping *closestOs){
+	// Test distances
+	// We seek the three closest oxygens to our hydronium ion
+	// Is this in eigen/zundel form? long lived pair = 1-2ps
+	float distance;
+	float smallest_distances[] = {16,17,18};
+	int water_idx[] = {-1,-1,-1};
+	int k = -1;
+
+	//Iterate through all the possible water molecules. Remember that we have 128 oxygens in our system, but one is the hydronium ion
+	for(int i = 1; i < 128; i++){
+			k++;
+			distance = compute_oxygen_distances(stack->ion.o1, stack->water[i].o1);
+			if(distance < smallest_distances[2] && distance > smallest_distances[1]){
+				smallest_distances[2] = distance; 
+				water_idx[2] = i;
+			}
+
+			else if(distance < smallest_distances[1] && distance > smallest_distances[0]){
+				smallest_distances[2] = smallest_distances[1]; 
+				smallest_distances[1] = distance; 
+				water_idx[2] = water_idx[1];
+				water_idx[1] = i;
+			}
+
+			else if(distance < smallest_distances[0]){
+				smallest_distances[2] = smallest_distances[1]; 
+				smallest_distances[1] = smallest_distances[0]; 
+				smallest_distances[0] = distance;
+			    water_idx[2] = water_idx[1];
+				water_idx[1] = water_idx[0];	
+				water_idx[0] = i;
+			}
+		}
+	assign_closest_waters(water_idx, closestOs);
+	// Build water molecules
+	//assign_waters(k, i, water_idx, analysis_frame, waters);
+
+}
+
+void frame_to_stack(struct Stack *stack, struct H3O *hydronium, struct H2O *waters){
+	stack->ion = *hydronium;
+	for(int i = 0; i < 128; i++){
+		stack->water[i] = waters[i];
+	}
+}
+
+
+void identify_index(struct Stack *last_stack, struct Stack *current_stack, struct H3O *hydronium, struct H2O *waters){
+	current_stack->ion = *hydronium;
+	float checker;
+	float smallest_distance = BOX_SIZE;
+	int smallest_distance_idx;
+	for(int i = 0; i < 128; i++){
+		smallest_distance = BOX_SIZE;
+		smallest_distance_idx = 0;
+		for(int j = 0; j < 128; j++){
+			checker = compute_oxygen_distances(current_stack->water[i].o1, last_stack->water[j].o1);
+			if (checker < smallest_distance){
+				smallest_distance = checker;
+				smallest_distance_idx = j;
+			}
+		}
+	current_stack->water[i] = waters[smallest_distance_idx];
+	}
+	printf("OXYGEN ID IN STACK: %d\n", current_stack->ion.index_o1);
+}
 
 int main(int argc, char* argv[]){
 
@@ -413,9 +537,17 @@ int main(int argc, char* argv[]){
 	*/
 
 	int i; //Counter for current atom number in the frame
-	for(int k = begin_frame; k < end_frame+1; k++){
+	struct Frame *current_frame =  malloc(sizeof(struct Frame));  // Frame to store coordinates	
 
-		struct Frame frame; // Frame to store coordinates
+	struct Stack *current_stack = malloc(sizeof(struct Stack)); 
+	struct Stack *last_stack = malloc(sizeof(struct Stack));
+
+	for(int k = begin_frame; k < end_frame+1; k++){
+		if(k != begin_frame){
+			last_stack = current_stack;
+			current_stack = malloc(sizeof(struct Stack));
+		}
+
 		i = 0; //Start at the first atom
 		fgets(buffer, 100, fp); // First line -> Number of atoms
 		fgets(buffer, 100, fp); // Second line -> info about timestep
@@ -427,19 +559,19 @@ int main(int argc, char* argv[]){
             token = strtok(buffer, " \t");    
 			
 			// First column -> atom name 
-			frame.atom_name[i] = token[0];
+			current_frame->atom_name[i] = token[0];
 			token = strtok(NULL, " \t");
 			
 			// Second column -> x coordinate
-			frame.x[i] = atof(token);
+			current_frame->x[i] = atof(token);
 			token = strtok(NULL, " \t");
 			
 			// Third column -> y coordinate
-			frame.y[i] = atof(token);
+			current_frame->y[i] = atof(token);
 			token = strtok(NULL, " \t");
 			
 			// Fourth column -> z coordinate
-			frame.z[i] = atof(token);
+			current_frame->z[i] = atof(token);
 
 			i++; // Read in the next atom
 		}
@@ -450,19 +582,29 @@ int main(int argc, char* argv[]){
 		one_iteration = clock(); // Begin timing one iteration of calculations
 
 		int current_H3O = ids.idx[k]; //The current H3O oxygen index from the index array
- 		struct H3O hydronium; // Struct to store the atom coordinates of the hydronium ion
+ 		struct H3O *hydronium = malloc (sizeof(struct H3O)); // Struct to store the atom coordinates of the hydronium ion
 		struct H2O waters[127]; // Struct to store the 127 water molecule atom coordinates
+		
+		
+		identify_ion(current_H3O, current_frame, hydronium); // Identify the hydronium ion
+		identify_waters(current_H3O, current_frame, waters); // Identify all of the water molecules
+		frame_to_stack(current_stack, hydronium, waters);
 
-		identify_ion(current_H3O, &frame, &hydronium); // Identify the hydronium ion
-		identify_waters(current_H3O, &frame, waters); // Identify all of the water molecules
+		if(k != begin_frame){
+			identify_index(last_stack, current_stack, hydronium, waters);
+		}
 
+		struct BookKeeping *keep = malloc(sizeof(struct BookKeeping));
+		identify_closest_oxygens(current_stack, keep); // Identify all of the water molecules
+		
 		one_iteration = clock() - one_iteration; // Stop timing the iteration
-
+		
 		printf("Finished processing frame %d.\nProcessing took %f seconds.\n", k, ((double)one_iteration)/CLOCKS_PER_SEC);
 		printf("======================================================\n\n");
 	}
 
 	begin = clock() - begin; //Stop timing the code
+	
 	printf("Processing frames %d-%d took %f seconds.\n", begin_frame, end_frame, ((double)begin)/CLOCKS_PER_SEC);
 	fclose(fp); //Close file
 }
