@@ -513,10 +513,12 @@ int main(int argc, char* argv[]){
 	read_ids(&ids); // Read in the hydronium oxygen ids
 	
 	FILE *fp;
+	FILE *filewriter;
 	char *token;
 	char buffer[200];
 	
 	fp = fopen("../water_scan-pos-1.xyz", "r");
+	filewriter = fopen("../output.txt", "w");
 	begin= clock(); // Start timing the code
 
 	/*
@@ -599,10 +601,14 @@ int main(int argc, char* argv[]){
 		
 		one_iteration = clock() - one_iteration; // Stop timing the iteration
 		
+		fprintf(filewriter, "Frame %d\nH3O ID: %d\n", k,((current_stack->ion.ion_index)-1)/3);
+		fprintf(filewriter, "Closest Water Molecule IDS: [%d %d %d]\n\n", keep->o[0], keep->o[1], keep->o[2]);
 		printf("Finished processing frame %d.\nProcessing took %f seconds.\n", k, ((double)one_iteration)/CLOCKS_PER_SEC);
 		printf("======================================================\n\n");
-	}
 
+		
+	}
+	
 	begin = clock() - begin; //Stop timing the code
 	
 	printf("Processing frames %d-%d took %f seconds.\n", begin_frame, end_frame, ((double)begin)/CLOCKS_PER_SEC);
