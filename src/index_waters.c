@@ -1,3 +1,5 @@
+// I have a trajectory of H2O molecules with an H3O+ ion. I want to track the extra proton.
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -171,6 +173,51 @@ float compute_distance(int oxygen_id, int i, struct Frame *analysis_frame){
 float compute_oxygen_distances(float o1[], float o2[]){
 	float distance_vector[3];
 	float distance_magnitude;
+
+	// Check coordinate in x-direction
+	if( o1[0] < -BOX_SIZE * 0.5 ){
+		 o1[0] =  o1[0] + BOX_SIZE;
+	}
+	else if( o1[0] >= BOX_SIZE * 0.5 ){
+	         o1[0] =  o1[0] - BOX_SIZE;
+	}
+
+	// Check coordinate in y-direction
+	if( o1[1] < -BOX_SIZE * 0.5 ){
+	        o1[1] = o1[1] + BOX_SIZE;
+	}
+	else if(o1[1] >= BOX_SIZE * 0.5 ){
+	        o1[1] = o1[1] - BOX_SIZE;
+	}
+	// Check coordinate in z-direction
+	if(o1[2]< -BOX_SIZE * 0.5 ){
+	        o1[2] = o1[2] + BOX_SIZE;
+	}
+	else if(o1[2] >= BOX_SIZE * 0.5 ){
+	        o1[2] = o1[2]- BOX_SIZE;
+	}
+
+	if( o2[0] < -BOX_SIZE * 0.5 ){
+		 o2[0] =  o2[0] + BOX_SIZE;
+	}
+	else if( o2[0] >= BOX_SIZE * 0.5 ){
+	         o2[0] =  o2[0] - BOX_SIZE;
+	}
+
+	// Check coordinate in y-direction
+	if( o2[1] < -BOX_SIZE * 0.5 ){
+	        o2[1] = o2[1] + BOX_SIZE;
+	}
+	else if(o2[1] >= BOX_SIZE * 0.5 ){
+	        o2[1] = o2[1] - BOX_SIZE;
+	}
+	// Check coordinate in z-direction
+	if(o2[2]< -BOX_SIZE * 0.5 ){
+	        o2[2] = o2[2] + BOX_SIZE;
+	}
+	else if(o2[2] >= BOX_SIZE * 0.5 ){
+	        o2[2] = o2[2]- BOX_SIZE;
+	}
 
 	// Compute the distance vector in the x-direction
 	distance_vector[0] = o1[0] - o1[0];
@@ -395,6 +442,10 @@ void identify_closest_oxygens(struct Stack *stack, struct BookKeeping *closestOs
 	// We seek the three closest oxygens to our hydronium ion
 	// Is this in eigen/zundel form? long lived pair = 1-2ps
 	float distance;
+	float distanceh1;
+	float distanceh2;
+	float distanceh3;
+
 	float smallest_distances[] = {16,17,18};
 	int water_idx[] = {-1,-1,-1};
 	int k = -1;
@@ -402,7 +453,18 @@ void identify_closest_oxygens(struct Stack *stack, struct BookKeeping *closestOs
 	//Iterate through all the possible water molecules. Remember that we have 128 oxygens in our system, but one is the hydronium ion
 	for(int i = 1; i < 128; i++){
 			k++;
-			distance = compute_oxygen_distances(stack->ion.o1, stack->water[i].o1);
+			distanceh1 = compute_oxygen_distances(stack->ion.h1, stack->water[i].o1);
+			distanceh2 = compute_oxygen_distances(stack->ion.h2, stack->water[i].o1);
+			distanceh3 = compute_oxygen_distances(stack->ion.h3, stack->water[i].o1);
+			if(distanceh1 < distanceh2 && distanceh1 < distanceh3){
+				distance = distanceh1;
+			}
+			else if(distanceh2 < distanceh3 && distanceh2 < distanceh1){
+				distance = distanceh2;
+			}
+			else if(distanceh3 < distanceh2 && distanceh3 < distanceh1){
+				distance = distanceh3;
+			}
 			if(distance < smallest_distances[2] && distance > smallest_distances[1]){
 				smallest_distances[2] = distance; 
 				water_idx[2] = i;
@@ -453,7 +515,7 @@ void identify_index(struct Stack *last_stack, struct Stack *current_stack, struc
 				smallest_distance_idx = j;
 			}
 		}
-	current_stack->water[i] = waters[smallest_distance_idx];
+	current_stack->water[i] = last_stack->water[smallest_distance_idx];
 	}
 	printf("OXYGEN ID IN STACK: %d\n", current_stack->ion.index_o1);
 }
@@ -514,11 +576,13 @@ int main(int argc, char* argv[]){
 	
 	FILE *fp;
 	FILE *filewriter;
+	FILE *framewriter;
 	char *token;
 	char buffer[200];
 	
 	fp = fopen("../water_scan-pos-1.xyz", "r");
 	filewriter = fopen("../output.txt", "w");
+	framewriter = fopen("../frame_change.txt", "w");
 	begin= clock(); // Start timing the code
 
 	/*
@@ -597,15 +661,28 @@ int main(int argc, char* argv[]){
 		}
 
 		struct BookKeeping *keep = malloc(sizeof(struct BookKeeping));
+		struct BookKeeping *old_keep = malloc(sizeof(struct BookKeeping));
+
 		identify_closest_oxygens(current_stack, keep); // Identify all of the water molecules
-		
+		identify_closest_oxygens(last_stack, old_keep); // Identify all of the water molecules
+
 		one_iteration = clock() - one_iteration; // Stop timing the iteration
 		
-		fprintf(filewriter, "Frame %d\nH3O ID: %d\n", k,((current_stack->ion.ion_index)-1)/3);
+		current_stack->ion.ion_index = (current_stack->ion.ion_index-1)/3;
+
+		printf("%d -> %d\n", last_stack->ion.ion_index,current_stack->ion.ion_index );
+		printf("%d -> %d\n", old_keep->o[0], keep->o[0]);
+		printf("%d -> %d\n", old_keep->o[1], keep->o[1]);
+		printf("%d -> %d\n", old_keep->o[2], keep->o[2]);
+		
+		if(last_stack->ion.ion_index != current_stack->ion.ion_index ||old_keep->o[0]  != keep->o[0] || old_keep->o[1]  != keep->o[1] || old_keep->o[2]  != keep->o[2]){
+		fprintf(framewriter, "%d\n", k);
+		}
+		fprintf(filewriter, "Frame %d\nH3O ID: %d\n", k, current_stack->ion.ion_index);
 		fprintf(filewriter, "Closest Water Molecule IDS: [%d %d %d]\n\n", keep->o[0], keep->o[1], keep->o[2]);
 		printf("Finished processing frame %d.\nProcessing took %f seconds.\n", k, ((double)one_iteration)/CLOCKS_PER_SEC);
 		printf("======================================================\n\n");
-
+	
 		
 	}
 	
@@ -613,4 +690,6 @@ int main(int argc, char* argv[]){
 	
 	printf("Processing frames %d-%d took %f seconds.\n", begin_frame, end_frame, ((double)begin)/CLOCKS_PER_SEC);
 	fclose(fp); //Close file
+	fclose(filewriter);
+	fclose(framewriter);
 }
