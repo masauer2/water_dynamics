@@ -170,7 +170,153 @@ float compute_distance(int oxygen_id, int i, struct Frame *analysis_frame){
 	return distance_magnitude;
 }
 
-float compute_oxygen_distances(float o1[], float o2[]){
+float compute_oxygen_distances(float o1[], float o2[], float o3[]){
+	float distance_vector[3];
+	float distance_vector_2[3];
+	float distance_magnitude;
+
+	// Check coordinate in x-direction
+	if( o1[0] < -BOX_SIZE * 0.5 ){
+		 o1[0] =  o1[0] + BOX_SIZE;
+	}
+	else if( o1[0] >= BOX_SIZE * 0.5 ){
+	         o1[0] =  o1[0] - BOX_SIZE;
+	}
+
+	// Check coordinate in y-direction
+	if( o1[1] < -BOX_SIZE * 0.5 ){
+	        o1[1] = o1[1] + BOX_SIZE;
+	}
+	else if(o1[1] >= BOX_SIZE * 0.5 ){
+	        o1[1] = o1[1] - BOX_SIZE;
+	}
+	// Check coordinate in z-direction
+	if(o1[2]< -BOX_SIZE * 0.5 ){
+	        o1[2] = o1[2] + BOX_SIZE;
+	}
+	else if(o1[2] >= BOX_SIZE * 0.5 ){
+	        o1[2] = o1[2]- BOX_SIZE;
+	}
+
+	if( o2[0] < -BOX_SIZE * 0.5 ){
+		 o2[0] =  o2[0] + BOX_SIZE;
+	}
+	else if( o2[0] >= BOX_SIZE * 0.5 ){
+	         o2[0] =  o2[0] - BOX_SIZE;
+	}
+
+	// Check coordinate in y-direction
+	if( o2[1] < -BOX_SIZE * 0.5 ){
+	        o2[1] = o2[1] + BOX_SIZE;
+	}
+	else if(o2[1] >= BOX_SIZE * 0.5 ){
+	        o2[1] = o2[1] - BOX_SIZE;
+	}
+	// Check coordinate in z-direction
+	if(o2[2]< -BOX_SIZE * 0.5 ){
+	        o2[2] = o2[2] + BOX_SIZE;
+	}
+	else if(o2[2] >= BOX_SIZE * 0.5 ){
+	        o2[2] = o2[2]- BOX_SIZE;
+	}
+
+	if( o3[0] < -BOX_SIZE * 0.5 ){
+		 o3[0] =  o3[0] + BOX_SIZE;
+	}
+	else if( o3[0] >= BOX_SIZE * 0.5 ){
+	         o3[0] =  o3[0] - BOX_SIZE;
+	}
+
+	// Check coordinate in y-direction
+	if( o3[1] < -BOX_SIZE * 0.5 ){
+	        o3[1] = o3[1] + BOX_SIZE;
+	}
+	else if(o3[1] >= BOX_SIZE * 0.5 ){
+	        o3[1] = o3[1] - BOX_SIZE;
+	}
+	// Check coordinate in z-direction
+	if(o3[2]< -BOX_SIZE * 0.5 ){
+	        o3[2] = o3[2] + BOX_SIZE;
+	}
+	else if(o3[2] >= BOX_SIZE * 0.5 ){
+	        o3[2] = o3[2]- BOX_SIZE;
+	}
+	// Compute the distance vector in the x-direction
+	distance_vector[0] = o1[0] - o1[0];
+
+	// Distance vector must also obey this convention
+	// Check distance vector in x-direction
+	if(distance_vector[0] > BOX_SIZE * 0.5){
+		distance_vector[0] = distance_vector[0] - BOX_SIZE;
+	}
+	else if(distance_vector[0] <= -BOX_SIZE * 0.5){
+		distance_vector[0] = distance_vector[0] + BOX_SIZE;
+	}
+
+	// Compute the distance vector in the y-direction
+	distance_vector[1] = o1[1] - o2[1];
+
+	// Check distance vector in y-direction
+	if(distance_vector[1] > BOX_SIZE * 0.5){
+	        distance_vector[1] = distance_vector[1] - BOX_SIZE;
+	}
+	else if(distance_vector[1] <= -BOX_SIZE * 0.5){
+	        distance_vector[1] = distance_vector[1] + BOX_SIZE;
+	}
+	
+	// Compute the distance vector in the z-direction
+	distance_vector[2] = o1[2] - o2[2];
+
+	// Check distance vector in z-direction
+	if(distance_vector[2] > BOX_SIZE * 0.5){
+	        distance_vector[2] = distance_vector[2] - BOX_SIZE;
+	}
+	else if(distance_vector[2] <= -BOX_SIZE * 0.5){
+	        distance_vector[2] = distance_vector[2] + BOX_SIZE;
+	}
+
+
+
+	distance_vector_2[0] = o3[0] - o1[0];
+
+	// Distance vector must also obey this convention
+	// Check distance vector in x-direction
+	if(distance_vector_2[0] > BOX_SIZE * 0.5){
+		distance_vector_2[0] = distance_vector_2[0] - BOX_SIZE;
+	}
+	else if(distance_vector_2[0] <= -BOX_SIZE * 0.5){
+		distance_vector_2[0] = distance_vector_2[0] + BOX_SIZE;
+	}
+
+	// Compute the distance vector in the y-direction
+	distance_vector_2[1] = o3[1] - o1[1];
+
+	// Check distance vector in y-direction
+	if(distance_vector_2[1] > BOX_SIZE * 0.5){
+	        distance_vector_2[1] = distance_vector_2[1] - BOX_SIZE;
+	}
+	else if(distance_vector_2[1] <= -BOX_SIZE * 0.5){
+	        distance_vector_2[1] = distance_vector_2[1] + BOX_SIZE;
+	}
+	// Compute the distance vector in the z-direction
+	distance_vector_2[2] = o3[2] - o1[2];
+
+	// Check distance vector in z-direction
+	if(distance_vector_2[2] > BOX_SIZE * 0.5){
+	        distance_vector_2[2] = distance_vector_2[2] - BOX_SIZE;
+	}
+	else if(distance_vector_2[2] <= -BOX_SIZE * 0.5){
+	        distance_vector_2[2] = distance_vector_2[2] + BOX_SIZE;
+	}
+
+	// Compute the distance between the two atoms and return this value
+	distance_magnitude = sqrt(pow(distance_vector[0],2) + pow(distance_vector[1],2) + pow(distance_vector[2],2));	
+	float angle = (180/3.14)*acos((distance_vector[0]*distance_vector_2[0]+distance_vector[1]*distance_vector_2[1]+distance_vector[2]*distance_vector_2[2])/(sqrt(distance_vector[0]*distance_vector[0] + distance_vector[1]*distance_vector[1] + distance_vector[2]*distance_vector[2])*sqrt(distance_vector_2[0]*distance_vector_2[0] + distance_vector_2[1]*distance_vector_2[1] + distance_vector_2[2]*distance_vector_2[2])));
+	printf("%f\n", angle);
+	return distance_magnitude;
+}
+
+float compute_smallest_distances(float o1[], float o2[]){
 	float distance_vector[3];
 	float distance_magnitude;
 
@@ -219,6 +365,7 @@ float compute_oxygen_distances(float o1[], float o2[]){
 	        o2[2] = o2[2]- BOX_SIZE;
 	}
 
+	
 	// Compute the distance vector in the x-direction
 	distance_vector[0] = o1[0] - o1[0];
 
@@ -253,11 +400,13 @@ float compute_oxygen_distances(float o1[], float o2[]){
 	        distance_vector[2] = distance_vector[2] + BOX_SIZE;
 	}
 
+
+
+
 	// Compute the distance between the two atoms and return this value
 	distance_magnitude = sqrt(pow(distance_vector[0],2) + pow(distance_vector[1],2) + pow(distance_vector[2],2));	
 	return distance_magnitude;
 }
-
 /*
 Assign the water molecule coordinates to the respective struct.
 
@@ -326,6 +475,9 @@ void assign_ion(int oxygen_id, int* hydrogen_index, struct Frame *analysis_frame
 	//Print out some basic info about the hydronium ion
 	printf("Oxygen ID IN FRAME: %d\n", oxygen_id);
 	printf("HYDRONIUM HYDROGEN IDS: %d %d %d\n", hydrogen_index[0], hydrogen_index[1], hydrogen_index[2]);
+	printf("H1 COORDS : %f %f %f\n", hydronium->h1[0], hydronium->h1[1], hydronium->h1[2]);
+	printf("H2 COORDS : %f %f %f\n", hydronium->h2[0], hydronium->h2[1], hydronium->h2[2]);
+	printf("H3 COORDS : %f %f %f\n", hydronium->h3[0], hydronium->h3[1], hydronium->h3[2]);
 }
 
 void assign_closest_waters(int water_idx[], struct BookKeeping *closestOs){
@@ -441,75 +593,83 @@ void identify_closest_oxygens(struct Stack *stack, struct BookKeeping *closestOs
 	// Test distances
 	// We seek the three closest oxygens to our hydronium ion
 	// Is this in eigen/zundel form? long lived pair = 1-2ps
-	float distance;
+	float distance = 18.0;
 	float distanceh1;
-	float distanceh2;
-	float distanceh3;
-
+	int index_close;
+	double vec1[3];
+	double vec2[3];
+	double angle;
 	float smallest_distances[] = {16,17,18};
 	int water_idx[] = {-1,-1,-1};
 	int k = -1;
 
 	//Iterate through all the possible water molecules. Remember that we have 128 oxygens in our system, but one is the hydronium ion
-	for(int i = 1; i < 128; i++){
-			k++;
-			distanceh1 = compute_oxygen_distances(stack->ion.h1, stack->water[i].o1);
-			distanceh2 = compute_oxygen_distances(stack->ion.h2, stack->water[i].o1);
-			distanceh3 = compute_oxygen_distances(stack->ion.h3, stack->water[i].o1);
-			if(distanceh1 < distanceh2 && distanceh1 < distanceh3){
+		for(int i = 0; i < 127; i++){
+			distanceh1 = compute_oxygen_distances(stack->ion.h1, stack->water[i].o1, stack->ion.o1);
+			if(distanceh1 < distance){
 				distance = distanceh1;
-			}
-			else if(distanceh2 < distanceh3 && distanceh2 < distanceh1){
-				distance = distanceh2;
-			}
-			else if(distanceh3 < distanceh2 && distanceh3 < distanceh1){
-				distance = distanceh3;
-			}
-			if(distance < smallest_distances[2] && distance > smallest_distances[1]){
-				smallest_distances[2] = distance; 
-				water_idx[2] = i;
-			}
-
-			else if(distance < smallest_distances[1] && distance > smallest_distances[0]){
-				smallest_distances[2] = smallest_distances[1]; 
-				smallest_distances[1] = distance; 
-				water_idx[2] = water_idx[1];
-				water_idx[1] = i;
-			}
-
-			else if(distance < smallest_distances[0]){
-				smallest_distances[2] = smallest_distances[1]; 
-				smallest_distances[1] = smallest_distances[0]; 
-				smallest_distances[0] = distance;
-			    water_idx[2] = water_idx[1];
-				water_idx[1] = water_idx[0];	
-				water_idx[0] = i;
+				index_close = i;
 			}
 		}
-	assign_closest_waters(water_idx, closestOs);
-	// Build water molecules
-	//assign_waters(k, i, water_idx, analysis_frame, waters);
+		closestOs -> o[0] = index_close;
+		distance = 16.0;
 
-}
+		for(int i = 0; i < 127; i++){
+			distanceh1 = compute_oxygen_distances(stack->ion.h2, stack->water[i].o1, stack->ion.o1);
+			if(distanceh1 < distance){
+				distance = distanceh1;
+				index_close = i;
+			}
+		}
+		closestOs -> o[1] = index_close;
+		distance = 16.0;
+
+		for(int i = 0; i < 127; i++){
+			distanceh1 = compute_oxygen_distances(stack->ion.h3, stack->water[i].o1, stack->ion.o1);
+			if(distanceh1 < distance){
+				distance = distanceh1;
+				index_close = i;
+			}
+		}
+		closestOs -> o[2] = index_close;
+		// Build water molecules
+		//assign_waters(k, i, water_idx, analysis_frame, waters);
+	}
+	
+
+
 
 void frame_to_stack(struct Stack *stack, struct H3O *hydronium, struct H2O *waters){
 	stack->ion = *hydronium;
-	for(int i = 0; i < 128; i++){
+	for(int i = 0; i < 127; i++){
 		stack->water[i] = waters[i];
 	}
 }
 
+int test_lists(struct BookKeeping *keep, struct BookKeeping *old_keep){
+	int flag = 0;
+	for(int i = 0; i< 3; i++){
+			if(old_keep->o[i] == keep->o[0] || old_keep->o[i] == keep->o[1] || old_keep->o[i] == keep->o[2]){
+				flag = 0;
+			}
+			else{
+				flag = 1;
+				return flag;
+			}
+		}
+		return flag;
+	}
 
 void identify_index(struct Stack *last_stack, struct Stack *current_stack, struct H3O *hydronium, struct H2O *waters){
 	current_stack->ion = *hydronium;
 	float checker;
 	float smallest_distance = BOX_SIZE;
 	int smallest_distance_idx;
-	for(int i = 0; i < 128; i++){
+	for(int i = 0; i < 127; i++){
 		smallest_distance = BOX_SIZE;
 		smallest_distance_idx = 0;
-		for(int j = 0; j < 128; j++){
-			checker = compute_oxygen_distances(current_stack->water[i].o1, last_stack->water[j].o1);
+		for(int j = 0; j < 127; j++){
+			checker = compute_smallest_distances(current_stack->water[i].o1, last_stack->water[j].o1);
 			if (checker < smallest_distance){
 				smallest_distance = checker;
 				smallest_distance_idx = j;
@@ -675,8 +835,8 @@ int main(int argc, char* argv[]){
 		printf("%d -> %d\n", old_keep->o[1], keep->o[1]);
 		printf("%d -> %d\n", old_keep->o[2], keep->o[2]);
 		
-		if(last_stack->ion.ion_index != current_stack->ion.ion_index ||old_keep->o[0]  != keep->o[0] || old_keep->o[1]  != keep->o[1] || old_keep->o[2]  != keep->o[2]){
-		fprintf(framewriter, "%d\n", k);
+		if(last_stack->ion.ion_index != current_stack->ion.ion_index || test_lists(keep, old_keep) == 1){
+			fprintf(framewriter, "%d\n", k);
 		}
 		fprintf(filewriter, "Frame %d\nH3O ID: %d\n", k, current_stack->ion.ion_index);
 		fprintf(filewriter, "Closest Water Molecule IDS: [%d %d %d]\n\n", keep->o[0], keep->o[1], keep->o[2]);
