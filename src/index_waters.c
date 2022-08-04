@@ -358,8 +358,6 @@ void identify_ion(int oxygen_id, struct Frame *analysis_frame, struct H3O *hydro
 	
 	//Assign the coordinates of the hydrogen to the hydronium oxygen and print out information about the ion
 	assign_ion(oxygen_id, hydrogen_idx, analysis_frame, hydronium);
-
-	
 }
 
 /*
@@ -470,7 +468,6 @@ void identify_closest_oxygens(struct Stack *stack, struct BookKeeping *closestOs
 			}
 		}
 		closestOs -> o[2] = index_close;
-		printf("HBond Angles: [%f %f %f]", angles[0], angles[1], angles[2]);
 	}
 	
 
@@ -584,6 +581,8 @@ int main(int argc, char* argv[]){
 	FILE *filewriter;
 	FILE *framewriter;
 	FILE *traj;
+	FILE *ratiofile;
+
 	char *token;
 	char buffer[200];
 	
@@ -591,6 +590,7 @@ int main(int argc, char* argv[]){
 	filewriter = fopen("../output.txt", "w");
 	framewriter = fopen("../frame_change.txt", "w");
 	traj = fopen("../traj.xyz","w");
+	ratiofile = fopen("../ratio.txt","w");
 	begin= clock(); // Start timing the code
 
 	/*
@@ -610,13 +610,14 @@ int main(int argc, char* argv[]){
 	To prevent stack overflow, we read in one frame at a time. This program will need
 	to be implemented with heap storage to read in large amounts of data at once.
 	*/
-
+	double ratio = 0.0;
+	double total = 0;
 	int i; //Counter for current atom number in the frame
 	struct Frame *current_frame =  malloc(sizeof(struct Frame));  // Frame to store coordinates	
 
 	struct Stack *current_stack = malloc(sizeof(struct Stack)); 
 	struct Stack *last_stack = malloc(sizeof(struct Stack));
-
+	int j = 0;
 	for(int k = begin_frame; k < end_frame+1; k++){
 		if(k != begin_frame){
 			last_stack = current_stack;
@@ -685,25 +686,35 @@ int main(int argc, char* argv[]){
 		printf("%d -> %d\n", old_keep->o[1], keep->o[1]);
 		printf("%d -> %d\n", old_keep->o[2], keep->o[2]);
 
-		fprintf(traj, "%d\nt = %d\nO\t%f\t%f\t%f\n", 13, k, current_stack->ion.o1[0],current_stack->ion.o1[1],current_stack->ion.o1[2]);
+		fprintf(traj, "%d\nt = %d\nO\t%f\t%f\t%f\n", 7, k, current_stack->ion.o1[0],current_stack->ion.o1[1],current_stack->ion.o1[2]);
 		fprintf(traj, "H\t%f\t%f\t%f\n",  current_stack->ion.h1[0],current_stack->ion.h1[1],current_stack->ion.h1[2]);
 		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->ion.h2[0],current_stack->ion.h2[1],current_stack->ion.h2[2]);
 		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->ion.h3[0],current_stack->ion.h3[1],current_stack->ion.h3[2]);
 
 		fprintf(traj, "O\t%f\t%f\t%f\n", current_stack->water[(keep->o[0])].o1[0], current_stack->water[(keep->o[0])].o1[1], current_stack->water[(keep->o[0])].o1[2]);
-		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[(keep->o[0])].h1[0], current_stack->water[(keep->o[0])].h1[1], current_stack->water[(keep->o[0])].h1[2]);
-		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[(keep->o[0])].h2[0], current_stack->water[(keep->o[0])].h2[1], current_stack->water[(keep->o[0])].h2[2]);
+		//fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[(keep->o[0])].h1[0], current_stack->water[(keep->o[0])].h1[1], current_stack->water[(keep->o[0])].h1[2]);
+		//fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[(keep->o[0])].h2[0], current_stack->water[(keep->o[0])].h2[1], current_stack->water[(keep->o[0])].h2[2]);
 
 		fprintf(traj, "O\t%f\t%f\t%f\n", current_stack->water[keep->o[1]].o1[0], current_stack->water[keep->o[1]].o1[1], current_stack->water[keep->o[1]].o1[2]);
-		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[1]].h1[0], current_stack->water[keep->o[1]].h1[1], current_stack->water[keep->o[1]].h1[2]);
-		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[1]].h2[0], current_stack->water[keep->o[1]].h2[1], current_stack->water[keep->o[1]].h2[2]);
+		//fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[1]].h1[0], current_stack->water[keep->o[1]].h1[1], current_stack->water[keep->o[1]].h1[2]);
+		//fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[1]].h2[0], current_stack->water[keep->o[1]].h2[1], current_stack->water[keep->o[1]].h2[2]);
 
 		fprintf(traj, "O\t%f\t%f\t%f\n", current_stack->water[keep->o[2]].o1[0], current_stack->water[keep->o[2]].o1[1], current_stack->water[keep->o[2]].o1[2]);
-		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[2]].h1[0], current_stack->water[keep->o[2]].h1[1], current_stack->water[keep->o[2]].h1[2]);
-		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[2]].h2[0], current_stack->water[keep->o[2]].h2[1], current_stack->water[keep->o[2]].h2[2]);
+		//fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[2]].h1[0], current_stack->water[keep->o[2]].h1[1], current_stack->water[keep->o[2]].h1[2]);
+		//fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[2]].h2[0], current_stack->water[keep->o[2]].h2[1], current_stack->water[keep->o[2]].h2[2]);
+		
+		
+		j++;
 		if(last_stack->ion.ion_index != current_stack->ion.ion_index || test_lists(keep, old_keep) == 1){
 			fprintf(framewriter, "%d\n", k);
+			ratio = total/(j);
 		}
+		else if((last_stack->ion.ion_index == current_stack->ion.ion_index && test_lists(keep, old_keep) == 0)||j ==1){
+			total = total + 1;
+			ratio = total/j;
+		}
+
+		fprintf(ratiofile, "Current Ratio: %f\n", ratio);
 		fprintf(filewriter, "Frame %d\nH3O ID: %d\n", k, current_stack->ion.ion_index);
 		fprintf(filewriter, "Closest Water Molecule IDS: [%d %d %d]\n\n", keep->o[0], keep->o[1], keep->o[2]);
 		printf("Finished processing frame %d.\nProcessing took %f seconds.\n", k, ((double)one_iteration)/CLOCKS_PER_SEC);
@@ -717,4 +728,5 @@ int main(int argc, char* argv[]){
 	fclose(filewriter);
 	fclose(framewriter);
 	fclose(traj);
+	fclose(ratiofile);
 }
