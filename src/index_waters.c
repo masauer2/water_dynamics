@@ -102,6 +102,7 @@ void read_ids(struct hydronium_idx *arr){
 }
 
 void apply_pbc_coordinates(double *vec){
+
 	if(vec[0] < -BOX_SIZE * 0.5 ){
 		vec[0] = vec[0] + BOX_SIZE;
 	}
@@ -123,6 +124,7 @@ void apply_pbc_coordinates(double *vec){
 	else if(vec[2] >= BOX_SIZE * 0.5 ){
 	        vec[2] = vec[2] - BOX_SIZE;
 	}
+
 }
 
 void apply_pbc_distances(double *vec1, double *vec2, double *store_here){
@@ -175,9 +177,17 @@ double compute_distance(double vec1[], double vec2[]){
 	double distance_magnitude;
 	double coordinates[3] = {vec1[0], vec1[1], vec1[2]};
 	double coordinates_2[3] = {vec2[0], vec2[1], vec2[2]};
-
+	
+	/*
+	distance_vector[0] = vec2[0] - vec1[0] ;
+	distance_vector[1] = vec2[1] - vec1[1];
+	distance_vector[2] = vec2[2] - vec1[2];
+*/
 	apply_pbc_coordinates(coordinates);
+	apply_pbc_coordinates(coordinates_2);
 	apply_pbc_distances(coordinates, coordinates_2, distance_vector);
+	
+	
 	distance_magnitude = sqrt(pow(distance_vector[0],2) + pow(distance_vector[1],2) + pow(distance_vector[2],2));	
 	return distance_magnitude;
 }
@@ -186,13 +196,22 @@ double compute_hbond_angle(double h1[], double o1[], double o2[]){
 	double distance_vector[3];
 	double distance_vector_2[3];
 	double distance_magnitude;
-
+	
 	apply_pbc_coordinates(o1);	
 	apply_pbc_coordinates(h1);
 	apply_pbc_coordinates(o2);
 	apply_pbc_distances(h1, o1,distance_vector);
 	apply_pbc_distances(o2, o1, distance_vector_2);
 
+	/*
+	distance_vector[0] = h1[0] - o1[0];
+	distance_vector[1] = h1[1] - o1[1];
+	distance_vector[2] = h1[2] - o1[2];
+
+	distance_vector_2[0] = o2[0] - o1[0];
+	distance_vector_2[1] = o2[1] - o1[1];
+	distance_vector_2[2] = o2[2] - o1[2];
+	*/
 	// Compute the distance between the two atoms and return this value
 	distance_magnitude = sqrt(pow(distance_vector[0],2) + pow(distance_vector[1],2) + pow(distance_vector[2],2));	
 	double angle = (180/3.14)*acos((distance_vector[0]*distance_vector_2[0]+distance_vector[1]*distance_vector_2[1]+distance_vector[2]*distance_vector_2[2])/(sqrt(distance_vector[0]*distance_vector[0] + distance_vector[1]*distance_vector[1] + distance_vector[2]*distance_vector[2])*sqrt(distance_vector_2[0]*distance_vector_2[0] + distance_vector_2[1]*distance_vector_2[1] + distance_vector_2[2]*distance_vector_2[2])));
@@ -218,6 +237,7 @@ void assign_waters(int water_id, int oxygen_id, int* hydrogen_index, struct Fram
 				waters[water_id].h1[0] = analysis_frame->x[hydrogen_index[0]];
 				waters[water_id].h1[1] = analysis_frame->y[hydrogen_index[0]];
 				waters[water_id].h1[2] = analysis_frame->z[hydrogen_index[0]];
+
 				waters[water_id].h2[0] = analysis_frame->x[hydrogen_index[1]];
 				waters[water_id].h2[1] = analysis_frame->y[hydrogen_index[1]];
 				waters[water_id].h2[2] = analysis_frame->z[hydrogen_index[1]];
@@ -418,20 +438,20 @@ void identify_closest_oxygens(struct Stack *stack, struct BookKeeping *closestOs
 		for(int i = 0; i < 127; i++){
 			distanceh1 = compute_distance(stack->ion.h1,stack->water[i].o1);
 			angle = compute_hbond_angle(stack->ion.h1, stack->ion.o1, stack->water[i].o1);
-			if(distanceh1 < distance && angle < 45){
+			if(distanceh1 < distance && angle < 30){
 				distance = distanceh1;
 				index_close = i;
 				angles[0] = angle;
-
 			}
 		}
+
 		closestOs -> o[0] = index_close;
 		distance = 16.0;
 
 		for(int i = 0; i < 127; i++){
 			distanceh1 = compute_distance(stack->ion.h2,stack->water[i].o1);
 			angle = compute_hbond_angle(stack->ion.h2, stack->ion.o1, stack->water[i].o1);
-			if(distanceh1 < distance && angle < 45){
+			if(distanceh1 < distance && angle < 30){
 				distance = distanceh1;
 				index_close = i;
 				angles[1] = angle;
@@ -443,7 +463,7 @@ void identify_closest_oxygens(struct Stack *stack, struct BookKeeping *closestOs
 		for(int i = 0; i < 127; i++){
 			distanceh1 = compute_distance(stack->ion.h3,stack->water[i].o1);
 			angle = compute_hbond_angle(stack->ion.h3, stack->ion.o1, stack->water[i].o1);
-			if(distanceh1 < distance && angle < 45){
+			if(distanceh1 < distance && angle < 30){
 				distance = distanceh1;
 				index_close = i;
 				angles[2] = angle;
@@ -478,44 +498,34 @@ int test_lists(struct BookKeeping *keep, struct BookKeeping *old_keep){
 	}
 
 void identify_index(struct Stack *last_stack, struct Stack *current_stack, struct H3O *hydronium, struct H2O *waters){
+	struct Stack *copy_stack = current_stack;
 	current_stack->ion = *hydronium;
 	double checker;
+	double checker2;
+	double checker3;
 	double smallest_distance = BOX_SIZE;
+	double smallest_distance_2 = BOX_SIZE;
+	double smallest_distance_3 = BOX_SIZE;
 	int smallest_distance_idx;
 	for(int i = 0; i < 127; i++){
 		smallest_distance = BOX_SIZE;
+		smallest_distance_2 = BOX_SIZE;
+		smallest_distance_3 = BOX_SIZE;
 		smallest_distance_idx = 0;
 		for(int j = 0; j < 127; j++){
 			checker = compute_distance(current_stack->water[i].o1, last_stack->water[j].o1);
-			if (checker < smallest_distance){
+			checker2 = compute_distance(current_stack->water[i].h1, last_stack->water[j].h1);
+			checker3 = compute_distance(current_stack->water[i].h2, last_stack->water[j].h2);
+			if (checker < smallest_distance && checker2 < smallest_distance_2 && checker3 < smallest_distance_3){
 				smallest_distance = checker;
 				smallest_distance_idx = j;
 			}
 		}
-	current_stack->water[i] = last_stack->water[smallest_distance_idx];
+	//current_stack->water[i] = copy_stack->water[smallest_distance_idx];
 	}
 	printf("OXYGEN ID IN STACK: %d\n", current_stack->ion.index_o1);
 }
-
-int main(int argc, char* argv[]){
-
-	/* Checking for errors */
-
-	if(argc != 3){
-		printf("\n------------------------------------------------\n\nWrong number of inputs. \nThe correct usage of this program is as follows.\n\n ./index_waters begin_frame end_frame.\n\n------------------------------------------------\n");
-		exit(0);
-	}
-
-	int begin_frame;
-	int end_frame;
-
-	/* Setting the frames to be reading */
-
-	sscanf (argv[1],"%d",&begin_frame);
-	sscanf (argv[2],"%d",&end_frame);
-	
-
-	/* Checking for more errors */
+void check_errors(int begin_frame, int end_frame){
 	int error_state = 1; // Error state
 	if(end_frame < begin_frame){
 		error_state = error_state * 3;
@@ -542,30 +552,52 @@ int main(int argc, char* argv[]){
 		printf("\n------------------------------------------------\n\nThe correct usage of this program is as follows.\n\n ./index_waters begin_frame end_frame.\n\n------------------------------------------------\n");
 		exit(0);
 	}		
+}
+int main(int argc, char* argv[]){
+
+	/* Checking for errors */
+
+	if(argc != 3){
+		printf("\n------------------------------------------------\n\nWrong number of inputs. \nThe correct usage of this program is as follows.\n\n ./index_waters begin_frame end_frame.\n\n------------------------------------------------\n");
+		exit(0);
+	}
+
+	int begin_frame;
+	int end_frame;
+
+	/* Setting the frames to be reading */
+
+	sscanf (argv[1], "%d",&begin_frame);
+	sscanf (argv[2], "%d",&end_frame);
 	
+	check_errors(begin_frame, end_frame);
 	// Frames to read in with this code
 	int frame_number = end_frame-begin_frame;
 
 	clock_t begin; // Variable to time the entire code segment
 	clock_t one_iteration; // Variable to see how long it takes to run one frame
 	struct hydronium_idx ids; // Struct that will store the hydronium oxygen ids in an array
+
 	read_ids(&ids); // Read in the hydronium oxygen ids
 	
 	FILE *fp;
 	FILE *filewriter;
 	FILE *framewriter;
+	FILE *traj;
 	char *token;
 	char buffer[200];
 	
 	fp = fopen("../water_scan-pos-1.xyz", "r");
 	filewriter = fopen("../output.txt", "w");
 	framewriter = fopen("../frame_change.txt", "w");
+	traj = fopen("../traj.xyz","w");
 	begin= clock(); // Start timing the code
 
 	/*
 	When we are reading frames not starting from the beginning, fgets() the lines that
 	we do not need
 	*/
+	
 	if(begin_frame != 0){
 		for(int garb = 0; garb < 387*begin_frame; garb++){
 			fgets(buffer, 200, fp);
@@ -624,6 +656,7 @@ int main(int argc, char* argv[]){
 
 		one_iteration = clock(); // Begin timing one iteration of calculations
 
+
 		int current_H3O = ids.idx[k]; //The current H3O oxygen index from the index array
  		struct H3O *hydronium = malloc (sizeof(struct H3O)); // Struct to store the atom coordinates of the hydronium ion
 		struct H2O waters[127]; // Struct to store the 127 water molecule atom coordinates
@@ -651,16 +684,30 @@ int main(int argc, char* argv[]){
 		printf("%d -> %d\n", old_keep->o[0], keep->o[0]);
 		printf("%d -> %d\n", old_keep->o[1], keep->o[1]);
 		printf("%d -> %d\n", old_keep->o[2], keep->o[2]);
-		
+
+		fprintf(traj, "%d\nt = %d\nO\t%f\t%f\t%f\n", 13, k, current_stack->ion.o1[0],current_stack->ion.o1[1],current_stack->ion.o1[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n",  current_stack->ion.h1[0],current_stack->ion.h1[1],current_stack->ion.h1[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->ion.h2[0],current_stack->ion.h2[1],current_stack->ion.h2[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->ion.h3[0],current_stack->ion.h3[1],current_stack->ion.h3[2]);
+
+		fprintf(traj, "O\t%f\t%f\t%f\n", current_stack->water[(keep->o[0])].o1[0], current_stack->water[(keep->o[0])].o1[1], current_stack->water[(keep->o[0])].o1[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[(keep->o[0])].h1[0], current_stack->water[(keep->o[0])].h1[1], current_stack->water[(keep->o[0])].h1[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[(keep->o[0])].h2[0], current_stack->water[(keep->o[0])].h2[1], current_stack->water[(keep->o[0])].h2[2]);
+
+		fprintf(traj, "O\t%f\t%f\t%f\n", current_stack->water[keep->o[1]].o1[0], current_stack->water[keep->o[1]].o1[1], current_stack->water[keep->o[1]].o1[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[1]].h1[0], current_stack->water[keep->o[1]].h1[1], current_stack->water[keep->o[1]].h1[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[1]].h2[0], current_stack->water[keep->o[1]].h2[1], current_stack->water[keep->o[1]].h2[2]);
+
+		fprintf(traj, "O\t%f\t%f\t%f\n", current_stack->water[keep->o[2]].o1[0], current_stack->water[keep->o[2]].o1[1], current_stack->water[keep->o[2]].o1[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[2]].h1[0], current_stack->water[keep->o[2]].h1[1], current_stack->water[keep->o[2]].h1[2]);
+		fprintf(traj, "H\t%f\t%f\t%f\n", current_stack->water[keep->o[2]].h2[0], current_stack->water[keep->o[2]].h2[1], current_stack->water[keep->o[2]].h2[2]);
 		if(last_stack->ion.ion_index != current_stack->ion.ion_index || test_lists(keep, old_keep) == 1){
 			fprintf(framewriter, "%d\n", k);
 		}
 		fprintf(filewriter, "Frame %d\nH3O ID: %d\n", k, current_stack->ion.ion_index);
 		fprintf(filewriter, "Closest Water Molecule IDS: [%d %d %d]\n\n", keep->o[0], keep->o[1], keep->o[2]);
 		printf("Finished processing frame %d.\nProcessing took %f seconds.\n", k, ((double)one_iteration)/CLOCKS_PER_SEC);
-		printf("======================================================\n\n");
-	
-		
+		printf("======================================================\n\n");	
 	}
 	
 	begin = clock() - begin; //Stop timing the code
@@ -669,4 +716,5 @@ int main(int argc, char* argv[]){
 	fclose(fp); //Close file
 	fclose(filewriter);
 	fclose(framewriter);
+	fclose(traj);
 }
